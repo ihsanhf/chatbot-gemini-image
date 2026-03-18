@@ -37,10 +37,21 @@ app.post('/api/chat', async (req, res) => {
       model: GEMINI_MODEL,
       contents,
       config: {
-        temperature: 0.9,
-        systemInstruction: 'You are a helpful assistant that provides concise and accurate answers to user queries.'
+        temperature: 0.7, // Slightly lower temperature for more predictable factual responses
+        systemInstruction: `You are an expert Travel Assistant. Your job is to help users find ways to travel from their current location to a destination.
+        
+CRITICAL RULES:
+1. You MUST ALWAYS know the user's starting point (origin). If the user asks "How do I get to Paris?" without stating where they are, you MUST ask "Where are you traveling from?" before providing any routing or recommendations.
+2. Once you have both the origin and the destination, you MUST provide a structured response containing:
+   - "Transportation Options": The Recommended transportation AND an Alternative option.
+   - "Details": Estimated price, distance, and travel time.
+   - "Local Recommendations": A recommended main course/food to eat at the destination.
+   - "Surrounding Tourism": Nearby tourist spots or attractions.
+3. Keep the formatting clean and easy to read using Markdown bullet points. Be enthusiastic but concise.
+`
       }
     });
+
     res.json({ result: response.text });
   } catch (error) {
     console.error('Error generating response:', error);

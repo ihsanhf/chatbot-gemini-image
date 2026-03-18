@@ -2,6 +2,9 @@ const chatForm = document.getElementById('chat-form');
 const userInput = document.getElementById('user-input');
 const chatBox = document.getElementById('chat-box');
 
+// Keep track of the conversation history for context
+let conversationHistory = [];
+
 // Helper function to append a message to the chat box
 function appendMessage(role, text, id = null) {
   const messageDiv = document.createElement('div');
@@ -24,8 +27,14 @@ chatForm.addEventListener('submit', async (e) => {
   const text = userInput.value.trim();
   if (!text) return;
 
-  // 1. Add the user's message to the chat box
+  // 1. Add the user's message to the chat box and history
   appendMessage('user', text);
+  conversationHistory.push({ role: 'user', text });
+
+  // Keep history manageable
+  if (conversationHistory.length > 20) {
+    conversationHistory = conversationHistory.slice(conversationHistory.length - 20);
+  }
 
   // Clear input
   userInput.value = '';
@@ -35,16 +44,14 @@ chatForm.addEventListener('submit', async (e) => {
   const thinkingMessage = appendMessage('bot', 'Thinking...', thinkingId);
 
   try {
-    // 3. Send the user's message as a POST request to /api/chat
+    // 3. Send the entire conversation history to provide context
     const response = await fetch('/api/chat', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        conversation: [
-          { role: 'user', text }
-        ]
+        conversation: conversationHistory
       })
     });
 
@@ -53,7 +60,14 @@ chatForm.addEventListener('submit', async (e) => {
     // 4. Replace "Thinking..." message
     const answer = data.result || data.response;
     if (response.ok && answer) {
-      thinkingMessage.textContent = answer;
+      if (typeof marked !== 'undefined') {
+        thinkingMessage.innerHTML = marked.parse(answer);
+      } else {
+        thinkingMessage.textContent = answer;
+      }
+
+      // Save bot response to history
+      conversationHistory.push({ role: 'model', text: answer });
     } else {
       // Handle API level error but with successful HTTP request
       throw new Error(data.error || 'Failed to get response from server.');
